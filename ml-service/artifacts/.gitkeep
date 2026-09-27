@@ -1,0 +1,2 @@
+# Model Artifacts Directory
+Trained model weights (.pkl, .pt, .h5), vectorizers, and label encoders are stored here.

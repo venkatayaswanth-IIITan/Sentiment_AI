@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseBot — BrandPulse AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #040d1a;
+      --surface:  #0a1628;
+      --card:     #0f1f35;
+      --border:   rgba(99,102,241,.25);
+      --accent:   #6366f1;
+      --accent2:  #818cf8;
+      --violet:   #a78bfa;
+      --emerald:  #10b981;
+      --rose:     #f43f5e;
+      --amber:    #f59e0b;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --dim:      #1e2d45;
+      --glow:     rgba(99,102,241,.18);
+      --radius:   16px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── layout ── */
+    .shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: 100vh;
+      max-height: 100vh;
+    }
+
+    /* ── sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .brand-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--violet));
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 18px;
+      box-shadow: 0 0 16px var(--glow);
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -.3px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .sidebar-body::-webkit-scrollbar { width: 4px; }
+    .sidebar-body::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-body::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 4px; }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      margin-top: 4px;
+    }
+
+    .topic-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all .2s;
+      margin-bottom: 3px;
+    }
+
+    .topic-chip:hover {
+      background: var(--dim);
+      color: var(--text);
+    }
+
+    .topic-chip .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .quick-section { margin-top: 20px; }
+
+    .quick-q {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: 7px;
+      transition: all .2s;
+      line-height: 1.4;
+    }
+
+    .quick-q:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(99,102,241,.08);
+    }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      margin-right: 5px;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+
+    /* ── main chat area ── */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* animated background */
+    .chat-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 70% 20%, rgba(99,102,241,.06) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 20% 80%, rgba(167,139,250,.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .chat-header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,22,40,.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar-bot {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+      display: grid; place-items: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+        .key-btn {
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.35);
+      color: #a78bfa;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .key-btn:hover {
+      background: rgba(99,102,241,.25);
+      border-color: #6366f1;
+    }
+    .key-btn.active {
+      background: rgba(16,185,129,.15);
+      border-color: rgba(16,185,129,.35);
+      color: #10b981;
+    }
+    .key-panel {
+      position: absolute;
+      top: 68px;
+      right: 28px;
+      width: 340px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.6);
+      z-index: 100;
+      display: none;
+    }
+    .key-panel.show { display: block; }
+
+.chat-header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .chat-header .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .header-badge {
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.35);
+      color: var(--accent2);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* ── messages ── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .messages::-webkit-scrollbar { width: 5px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 4px; }
+
+    /* welcome card */
+    .welcome-card {
+      background: linear-gradient(135deg, rgba(99,102,241,.12) 0%, rgba(167,139,250,.08) 100%);
+      border: 1px solid rgba(99,102,241,.25);
+      border-radius: 20px;
+      padding: 28px 32px;
+      text-align: center;
+      margin: auto;
+      max-width: 520px;
+      width: 100%;
+      animation: fade-up .5s ease;
+    }
+
+    .welcome-card .emoji { font-size: 48px; margin-bottom: 14px; }
+
+    .welcome-card h2 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #c4b5fd, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .welcome-card p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .welcome-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: center;
+    }
+
+    .welcome-chip {
+      background: rgba(99,102,241,.1);
+      border: 1px solid rgba(99,102,241,.25);
+      color: var(--accent2);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .welcome-chip:hover {
+      background: rgba(99,102,241,.22);
+      border-color: var(--accent);
+    }
+
+    /* message bubbles */
+    .msg-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: fade-up .3s ease;
+    }
+
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      display: grid; place-items: center;
+      font-size: 16px;
+    }
+
+    .msg-avatar.bot {
+      background: linear-gradient(135deg, var(--accent), var(--violet));
+      box-shadow: 0 0 12px var(--glow);
+    }
+
+    .msg-avatar.user {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    }
+
+    .msg-bubble {
+      max-width: 72%;
+      padding: 13px 16px;
+      border-radius: 16px;
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+
+    .msg-row.bot .msg-bubble {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg-row.user .msg-bubble {
+      background: linear-gradient(135deg, #3730a3, #4338ca);
+      border: 1px solid rgba(99,102,241,.4);
+      border-top-right-radius: 4px;
+      color: white;
+    }
+
+    /* out-of-scope styling */
+    .msg-bubble.out-of-scope {
+      background: rgba(244,63,94,.08);
+      border-color: rgba(244,63,94,.3);
+    }
+
+    .msg-bubble.out-of-scope .scope-icon { color: var(--rose); margin-right: 6px; }
+
+    /* code blocks inside messages */
+    .msg-bubble code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: rgba(0,0,0,.35);
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: #93c5fd;
+    }
+
+    .msg-bubble pre {
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(99,102,241,.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: #93c5fd;
+      line-height: 1.55;
+    }
+
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 5px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .msg-row.user .msg-meta { flex-direction: row-reverse; }
+
+    .source-badge {
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 9.5px;
+      font-weight: 600;
+    }
+
+    .source-badge.gemini { background: rgba(16,185,129,.12); color: var(--emerald); }
+    .source-badge.local  { background: rgba(245,158,11,.12); color: var(--amber); }
+    .source-badge.fallback { background: rgba(100,116,139,.12); color: var(--muted); }
+
+    /* typing indicator */
+    .typing-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: fade-up .3s ease;
+    }
+
+    .typing-bubble {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      border-top-left-radius: 4px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: bounce 1.3s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: .15s; }
+    .typing-dot:nth-child(3) { animation-delay: .3s; }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); opacity: .5; }
+      50%       { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* ── input area ── */
+    .input-area {
+      position: relative;
+      z-index: 2;
+      padding: 16px 28px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(10,22,40,.9);
+      backdrop-filter: blur(12px);
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .input-wrap {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      transition: border-color .2s, box-shadow .2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--glow);
+    }
+
+    textarea {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: none;
+      max-height: 120px;
+      min-height: 22px;
+      line-height: 1.5;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    .char-count {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+
+    .char-count.warn { color: var(--amber); }
+    .char-count.over { color: var(--rose); }
+
+    .send-btn {
+      width: 46px; height: 46px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--violet));
+      color: white;
+      cursor: pointer;
+      display: grid; place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      box-shadow: 0 4px 14px var(--glow);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99,102,241,.4);
+    }
+
+    .send-btn:active:not(:disabled) { transform: translateY(0); }
+
+    .send-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .clear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+      align-self: flex-end;
+    }
+
+    .clear-btn:hover {
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* responsive */
+    @media (max-width: 768px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .messages, .chat-header, .input-area { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-row">
+        <img src="pulsebot.jpg" alt="PulseBot" class="brand-icon" style="object-fit:cover;border-radius:10px;border:1px solid rgba(167,139,250,.4);" />
+        <div>
+          <div class="brand-name">PulseBot</div>
+          <div class="brand-sub">BrandPulse AI Assistant</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-body">
+      <div class="section-label">📚 Topics I Know</div>
+
+      <div class="topic-chip" onclick="askQuestion('What is BrandPulse AI?')">
+        <span class="dot"></span>Project Overview
+      </div>
+      <div class="topic-chip" onclick="askQuestion('What ML models does BrandPulse AI support?')">
+        <span class="dot"></span>ML Models (2 Models)
+      </div>
+      <div class="topic-chip" onclick="askQuestion('What dataset was used for training?')">
+        <span class="dot" style="background:#f59e0b"></span>Sentiment140 Dataset
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does text preprocessing work?')">
+        <span class="dot" style="background:#10b981"></span>Preprocessing Pipeline
+      </div>
+      <div class="topic-chip" onclick="askQuestion('What are the 10 ABSA aspects?')">
+        <span class="dot" style="background:#a78bfa"></span>ABSA (10 Aspects)
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does emotion detection work?')">
+        <span class="dot" style="background:#f43f5e"></span>Emotion Detection
+      </div>
+      <div class="topic-chip" onclick="askQuestion('What does the /intelligence endpoint return?')">
+        <span class="dot" style="background:#0ea5e9"></span>Intelligence Endpoint
+      </div>
+      <div class="topic-chip" onclick="askQuestion('What are the backend API routes?')">
+        <span class="dot"></span>Backend REST API
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does the database schema look?')">
+        <span class="dot" style="background:#f59e0b"></span>Database Schema
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does authentication work?')">
+        <span class="dot" style="background:#10b981"></span>Authentication & JWT
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does Docker Compose work for this project?')">
+        <span class="dot" style="background:#0ea5e9"></span>Docker Deployment
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How does CSV batch import and alerts work?')">
+        <span class="dot" style="background:#f43f5e"></span>CSV Batch & Alerts
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How is the frontend built?')">
+        <span class="dot" style="background:#a78bfa"></span>Frontend & Dashboard
+      </div>
+      <div class="topic-chip" onclick="askQuestion('How is Gemini AI integrated?')">
+        <span class="dot"></span>Gemini AI Integration
+      </div>
+
+      <div class="quick-section">
+        <div class="section-label">⚡ Quick Questions</div>
+        <div class="quick-q" onclick="askQuestion('How do I start the project locally?')">
+          🚀 How to start the project locally?
+        </div>
+        <div class="quick-q" onclick="askQuestion('What are the rate limits?')">
+          🔒 What are the rate limits?
+        </div>
+        <div class="quick-q" onclick="askQuestion('What is the fallback heuristic when no model is loaded?')">
+          🔄 How does the fallback heuristic work?
+        </div>
+        <div class="quick-q" onclick="askQuestion('What is the priority score formula?')">
+          📊 How is priority score calculated?
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>Project-scope only<br/>
+      Powered by Gemini AI + Local KB
+    </div>
+  </aside>
+
+  <!-- ── Chat Area ── -->
+  <main class="chat-area">
+
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <img src="pulsebot.jpg" alt="PulseBot" class="avatar-bot" style="object-fit:cover;border:1.5px solid rgba(167,139,250,.4);" />
+        <div>
+          <h1>PulseBot</h1>
+          <div class="subtitle">BrandPulse AI Project Assistant</div>
+        </div>
+      </div>
+      <div class="header-badge">Strict Project &amp; PDF Scope</div>
+    </div>
+
+    <div class="messages" id="messages">
+      <!-- Welcome card -->
+      <div class="welcome-card" id="welcomeCard">
+        <img src="pulsebot.jpg" alt="PulseBot" style="width:64px;height:64px;border-radius:18px;object-fit:cover;box-shadow:0 0 24px rgba(99,102,241,.5);border:2px solid rgba(167,139,250,.5);margin:0 auto 12px;display:block;" />
+        <h2>Hello! I'm PulseBot</h2>
+        <p>
+          Your dedicated assistant for the <strong>BrandPulse AI</strong> project.<br/>
+          I can only answer questions about this platform — architecture, ML models,
+          APIs, database schema, authentication, Docker, and more.
+        </p>
+        <div class="welcome-chips">
+          <div class="welcome-chip" onclick="askQuestion('What is BrandPulse AI?')">Overview</div>
+          <div class="welcome-chip" onclick="askQuestion('What ML models are supported?')">ML Models</div>
+          <div class="welcome-chip" onclick="askQuestion('How does ABSA work?')">ABSA</div>
+          <div class="welcome-chip" onclick="askQuestion('How does JWT auth work?')">Auth</div>
+          <div class="welcome-chip" onclick="askQuestion('How to start the project?')">Quick Start</div>
+          <div class="welcome-chip" onclick="askQuestion('Explain the database schema')">Database</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-hint">
+        💡 Ask anything about <strong>BrandPulse AI</strong> — I'll only answer project-related questions
+      </div>
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea
+            id="inputBox"
+            rows="1"
+            maxlength="1000"
+            placeholder="Ask about ML models, API endpoints, database schema, authentication..."
+            onInput="autoResize(this); updateCharCount(this)"
+            onKeydown="handleKey(event)"
+          ></textarea>
+          <span class="char-count" id="charCount">0/1000</span>
+        </div>
+        <button class="clear-btn" onclick="clearChat()" title="Clear chat">🗑</button>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send (Enter)">➤</button>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:5000/api/chatbot';
+  let isTyping = false;
+
+  /* ── helpers ── */
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function updateCharCount(el) {
+    const n = el.value.length;
+    const el2 = document.getElementById('charCount');
+    el2.textContent = n + '/1000';
+    el2.className = 'char-count' + (n > 900 ? ' warn' : '') + (n >= 1000 ? ' over' : '');
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function scrollToBottom() {
+    const m = document.getElementById('messages');
+    m.scrollTo({ top: m.scrollHeight, behavior: 'smooth' });
+  }
+
+  function timeNow() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function formatAnswer(text) {
+    // code blocks
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre>${escapeHtml(code.trim())}</pre>`
+    );
+    // inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // bold
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // line breaks
+    text = text.replace(/\n/g, '<br/>');
+    return text;
+  }
+
+  /* ── message rendering ── */
+  function appendMessage(role, content, meta = {}) {
+    const wc = document.getElementById('welcomeCard');
+    if (wc) wc.remove();
+
+    const msgs = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = `msg-row ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `msg-avatar ${role}`;
+    if (role === 'bot') {
+      avatar.style.padding = '0';
+      avatar.style.overflow = 'hidden';
+      avatar.innerHTML = `<img src="pulsebot.jpg" alt="PulseBot" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block;" />`;
+    } else {
+      avatar.textContent = '👤';
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble' + (meta.related === false ? ' out-of-scope' : '');
+
+    if (meta.related === false) {
+      bubble.innerHTML = `<span class="scope-icon">⚠️</span>${formatAnswer(content)}`;
+    } else {
+      bubble.innerHTML = formatAnswer(content);
+    }
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'msg-meta';
+    metaRow.innerHTML = `<span>${timeNow()}</span>` +
+      (meta.source ? `<span class="source-badge ${meta.source}">${meta.source}</span>` : '');
+
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.alignItems = role === 'user' ? 'flex-end' : 'flex-start';
+    wrap.appendChild(bubble);
+    wrap.appendChild(metaRow);
+
+    row.appendChild(avatar);
+    row.appendChild(wrap);
+    msgs.appendChild(row);
+    scrollToBottom();
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = 'typing-row';
+    row.id = 'typingRow';
+    row.innerHTML = `
+      <div class="msg-avatar bot" style="padding:0;overflow:hidden;"><img src="pulsebot.jpg" alt="PulseBot" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block;" /></div>
+      <div class="typing-bubble">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>`;
+    msgs.appendChild(row);
+    scrollToBottom();
+  }
+
+  function hideTyping() {
+    const r = document.getElementById('typingRow');
+    if (r) r.remove();
+  }
+
+  /* ── send ── */
+  async function sendMessage() {
+    if (isTyping) return;
+    const box = document.getElementById('inputBox');
+    const msg = box.value.trim();
+    if (!msg) return;
+
+    box.value = '';
+    box.style.height = 'auto';
+    updateCharCount(box);
+    document.getElementById('sendBtn').disabled = true;
+    isTyping = true;
+
+    appendMessage('user', escapeHtml(msg));
+    showTyping();
+
+    const storedKey = (localStorage.getItem('pulsebot_gemini_key') || '').trim();
+    const headers = { 'Content-Type': 'application/json' };
+    if (storedKey) headers['x-gemini-api-key'] = storedKey;
+
+    try {
+      const res = await fetch(API_BASE + '/ask', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message: msg, apiKey: storedKey || undefined }),
+      });
+      const data = await res.json();
+      hideTyping();
+
+      if (data.error) {
+        appendMessage('bot', `❌ Error: ${escapeHtml(data.error)}`, { related: false });
+      } else {
+        appendMessage('bot', data.answer || 'No answer received.', {
+          related: data.related,
+          source: data.source,
+        });
+      }
+    } catch (err) {
+      hideTyping();
+      appendMessage('bot',
+        'Could not connect to the backend. Make sure the Express server is running on port 5000.',
+        { related: false, source: 'fallback' }
+      );
+    }
+
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('inputBox').focus();
+    checkGeminiStatus();
+  }
+
+  function askQuestion(q) {
+    const box = document.getElementById('inputBox');
+    box.value = q;
+    updateCharCount(box);
+    sendMessage();
+  }
+
+  function clearChat() {
+    const msgs = document.getElementById('messages');
+    msgs.innerHTML = `
+      <div class="welcome-card" id="welcomeCard">
+        <div class="emoji">🔮</div>
+        <h2>Chat cleared!</h2>
+        <p>Ask me anything about the BrandPulse AI project.</p>
+        <div class="welcome-chips">
+          <div class="welcome-chip" onclick="askQuestion('What is BrandPulse AI?')">Overview</div>
+          <div class="welcome-chip" onclick="askQuestion('What ML models are supported?')">ML Models</div>
+          <div class="welcome-chip" onclick="askQuestion('How does JWT auth work?')">Auth</div>
+          <div class="welcome-chip" onclick="askQuestion('How to start the project?')">Quick Start</div>
+        </div>
+      </div>`;
+  }
+
+  
+  /* ── Gemini Key Management ── */
+  function checkGeminiStatus() {
+    const key = (localStorage.getItem('pulsebot_gemini_key') || '').trim();
+    const btn = document.getElementById('keyModalBtn');
+    const label = document.getElementById('keyBtnLabel');
+    const removeBtn = document.getElementById('removeKeyBtn');
+
+    if (key) {
+      if (btn) btn.classList.add('active');
+      if (label) label.textContent = 'Gemini ✦ Active';
+      if (removeBtn) removeBtn.style.display = 'inline-block';
+    } else {
+      if (btn) btn.classList.remove('active');
+      if (label) label.textContent = 'Set Gemini Key';
+      if (removeBtn) removeBtn.style.display = 'none';
+    }
+  }
+
+  function toggleKeyPanel() {
+    const p = document.getElementById('keyPanel');
+    if (!p) return;
+    p.classList.toggle('show');
+    if (p.classList.contains('show')) {
+      const stored = localStorage.getItem('pulsebot_gemini_key') || '';
+      document.getElementById('geminiKeyInput').value = stored;
+      document.getElementById('geminiKeyInput').focus();
+    }
+  }
+
+  async function saveGeminiKey() {
+    const val = document.getElementById('geminiKeyInput').value.trim();
+    if (!val) return;
+    localStorage.setItem('pulsebot_gemini_key', val);
+
+    try {
+      await fetch(API_BASE + '/set-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: val })
+      });
+    } catch (e) {}
+
+    const note = document.getElementById('keyStatusNote');
+    if (note) {
+      note.textContent = '✓ Gemini Key saved & activated!';
+      note.style.color = '#10b981';
+      note.style.display = 'block';
+    }
+    checkGeminiStatus();
+    setTimeout(() => {
+      if (note) note.style.display = 'none';
+      const p = document.getElementById('keyPanel');
+      if (p) p.classList.remove('show');
+    }, 1200);
+  }
+
+  function removeGeminiKey() {
+    localStorage.removeItem('pulsebot_gemini_key');
+    document.getElementById('geminiKeyInput').value = '';
+    const note = document.getElementById('keyStatusNote');
+    if (note) {
+      note.textContent = 'Gemini Key removed. Using Local KB.';
+      note.style.color = '#f59e0b';
+      note.style.display = 'block';
+    }
+    checkGeminiStatus();
+    setTimeout(() => {
+      if (note) note.style.display = 'none';
+      const p = document.getElementById('keyPanel');
+      if (p) p.classList.remove('show');
+    }, 1200);
+  }
+
+  /* focus input on load */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('inputBox').focus();
+  });
+</script>
+</body>
+</html>

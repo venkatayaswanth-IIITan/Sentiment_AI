@@ -1,0 +1,27 @@
+{
+  "cnn_bilstm": {
+    "model_name": "CNN + BiLSTM",
+    "architecture": "Conv1D(128, k=3) + Bidirectional LSTM(64) + SpatialDropout(0.3)",
+    "role": "primary",
+    "accuracy": 0.8256,
+    "precision": 0.8280,
+    "recall": 0.8220,
+    "f1": 0.8250,
+    "test_loss": 0.3942,
+    "dataset": "Sentiment140 (133,332 stratified samples)",
+    "test_samples": 20000,
+    "vocab_size": 20000,
+    "sequence_length": 30
+  },
+  "logistic_regression": {
+    "model_name": "Logistic Regression",
+    "architecture": "TF-IDF (100k features, n-grams 1-2) + L2 Regularization",
+    "role": "secondary",
+    "accuracy": 0.7785,
+    "precision": 0.7810,
+    "recall": 0.7740,
+    "f1": 0.7775,
+    "dataset": "Sentiment140",
+    "test_samples": 20000
+  }
+}

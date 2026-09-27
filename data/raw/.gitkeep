@@ -1,0 +1,3 @@
+# Raw Dataset Directory
+Place raw uncleaned datasets (CSV, JSON, scrapings) here.
+This directory is ignored by git except for this keepfile.

@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  name         String?
+  avatarUrl    String?    @map("avatar_url")
+  role         String     @default("USER")
+  isActive     Boolean    @default(true) @map("is_active")
+  isVerified   Boolean    @default(false) @map("is_verified")
+  lastLoginAt  DateTime?  @map("last_login_at")
+  sessions     Session[]
+  sentiments   Sentiment[]
+  analyses     Analysis[]
+  brands       UserBrand[]
+  alerts       Alert[]
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Legacy brand model (global) — kept for backwards compatibility
+model Brand {
+  id            String          @id @default(uuid())
+  name          String          @unique
+  industry      String?
+  website       String?
+  sentiments    Sentiment[]
+  aspectMetrics AspectMetric[]
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@map("brands")
+}
+
+model Sentiment {
+  id             String   @id @default(uuid())
+  brandId        String?  @map("brand_id")
+  brand          Brand?   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userId         String?  @map("user_id")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  source         String
+  content        String
+  sentimentLabel String   @map("sentiment_label")
+  sentimentScore Float    @map("sentiment_score")
+  modelVersion   String?  @map("model_version")
+  aspects        String?  @default("[]")
+  metadata       String?  @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([brandId])
+  @@index([userId])
+  @@map("sentiments")
+}
+
+model AspectMetric {
+  id            String   @id @default(uuid())
+  brandId       String   @map("brand_id")
+  brand         Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  aspectName    String   @map("aspect_name")
+  positiveCount Int      @default(0) @map("positive_count")
+  negativeCount Int      @default(0) @map("negative_count")
+  neutralCount  Int      @default(0) @map("neutral_count")
+  averageScore  Float    @default(0.0) @map("average_score")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([brandId, aspectName])
+  @@map("aspect_metrics")
+}
+
+// Phase 3-5: per-user analysis history
+model Analysis {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text       String
+  model      String
+  sentiment  String
+  label      Int
+  confidence Float?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("analyses")
+}
+
+// Phase 5: per-user brand monitoring keywords
+model UserBrand {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  keywords  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, name])
+  @@map("user_brands")
+}
+
+// Phase 5: alerts triggered by negative spikes
+model Alert {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("negative_spike")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("alerts")
+}

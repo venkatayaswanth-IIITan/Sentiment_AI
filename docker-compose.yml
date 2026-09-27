@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  database:
+    image: postgres:16-alpine
+    container_name: sentiment_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentiment_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentiment_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-sentiment_ai}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentiment_user} -d ${POSTGRES_DB:-sentiment_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sentiment-network
+
+  # ── ML Service (FastAPI) ────────────────────────────────────────────────────
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: sentiment_ml_service
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - ./ml-service/artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sentiment-network
+
+  # ── Express Backend ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentiment_backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sentiment_user}:${POSTGRES_PASSWORD:-sentiment_secret}@database:5432/${POSTGRES_DB:-sentiment_ai}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      ML_SERVICE_URL: http://ml-service:8000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "${PORT:-5000}:5000"
+    networks:
+      - sentiment-network
+
+  # ── React Frontend (Nginx) ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: sentiment_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - sentiment-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  sentiment-network:
+    driver: bridge

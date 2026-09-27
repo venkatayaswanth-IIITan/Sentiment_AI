@@ -1,0 +1,3 @@
+# Processed Dataset Directory
+Place preprocessed, tokenized, and cleaned datasets here ready for training.
+This directory is ignored by git except for this keepfile.
