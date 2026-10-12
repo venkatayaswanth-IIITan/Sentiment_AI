@@ -1,0 +1,36 @@
+services:
+  # ── 1. Python ML Microservice (FastAPI) ──────────────────────────────────
+  - type: web
+    name: sentiment-ai-ml
+    runtime: python
+    rootDir: ml-service
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+
+  # ── 2. Node.js Backend API (Express + Prisma) ───────────────────────────
+  - type: web
+    name: sentiment-ai-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        value: '*'
+      - key: ML_SERVICE_URL
+        value: http://127.0.0.1:8000
