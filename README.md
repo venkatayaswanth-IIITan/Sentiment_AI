@@ -1,4 +1,4 @@
-﻿# BrandPulse AI — End-to-End Sentiment & Aspect Monitoring Platform
+# BrandPulse AI — End-to-End Sentiment & Aspect Monitoring Platform
 
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -7,6 +7,11 @@
 [![Google Gemini](https://img.shields.io/badge/GenAI-Google%20Gemini%20%2B%20Search-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Deploy-Docker%20%26%20Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Vercel_Production-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-venkatayaswanth-iiitans-projects.vercel.app)
+
+> 🌐 **Live Application URL:** **[https://frontend-venkatayaswanth-iiitans-projects.vercel.app](https://frontend-venkatayaswanth-iiitans-projects.vercel.app)**  
+> ⚡ **Backend API Endpoint:** `https://sentiment-ai-backend.onrender.com`  
+> 🧠 **ML Microservice:** `https://sentiment-ai-ml.onrender.com`
 
 **BrandPulse AI** is a production-grade brand intelligence, sentiment monitoring, and executive analytics platform. It unifies high-throughput deep learning inference, natural language emotion and intent detection, aspect-based sentiment analysis (ABSA), predictive trend forecasting, and Google Gemini-powered executive insights into a sleek, responsive React 18 dashboard.
 
