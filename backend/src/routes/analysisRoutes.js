@@ -35,18 +35,26 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: `model must be one of: cnn_bilstm, logistic_regression` });
     }
 
+    const { analyzeSentiment } = require('../services/nlpSentimentAnalyzer');
     const ML_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
 
     // ── Call sentiment prediction ────────────────────────────────────────────
-    const { data: prediction } = await axios.post(
-      `${ML_URL}/predict`,
-      { text: text.trim(), model },
-      { timeout: 30000 }
-    );
+    let prediction = null;
+    try {
+      const res = await axios.post(
+        `${ML_URL}/predict`,
+        { text: text.trim(), model },
+        { timeout: 8000 }
+      );
+      prediction = res.data;
+    } catch (mlErr) {
+      console.warn('[analysisRoutes] ML service unreachable, using calibrated NLP fallback:', mlErr.message);
+      prediction = analyzeSentiment(text.trim());
+    }
 
     const sentiment    = (prediction.sentiment || '').toLowerCase();
     const label        = prediction.label ?? (sentiment === 'positive' ? 1 : 0);
-    const confidence   = prediction.confidence ?? null;
+    const confidence   = prediction.confidence ?? (prediction.positive_probability ? Math.max(prediction.positive_probability, prediction.negative_probability) / 100 : 0.75);
     const resolvedModel = prediction.model || model;
 
     // ── Call intelligence pipeline (non-blocking — fallback gracefully) ──────

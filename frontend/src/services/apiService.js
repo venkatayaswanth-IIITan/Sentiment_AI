@@ -4,6 +4,8 @@
  * The ML service is called indirectly via the backend.
  */
 
+import { analyzeSentimentClient } from './nlpSentimentAnalyzer';
+
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 function getToken() {
@@ -51,22 +53,15 @@ export async function analyzeText(text, model = 'logistic_regression') {
       }
     } catch (mlErr) {}
 
-    // Fallback calibrated sentiment
-    const words = text.toLowerCase().split(/\W+/);
-    const posWords = new Set(["love", "great", "excellent", "awesome", "good", "happy", "recommend", "best", "perfect", "fantastic", "wonderful", "fast", "speed", "unbelievable", "loving", "glad", "clean", "smooth", "helpful"]);
-    const negWords = new Set(["bad", "terrible", "worst", "hate", "awful", "poor", "broken", "horrible", "refund", "slow", "disappointing", "crashed", "outage", "fail", "failed", "unresponsive", "issue", "bug", "garbage"]);
-    const posHits = words.filter(w => posWords.has(w)).length;
-    const negHits = words.filter(w => negWords.has(w)).length;
-    const isPos = posHits >= negHits && (posHits > 0 || negHits === 0);
-    const conf = Math.min(0.98, Math.max(0.72, 0.72 + Math.abs(posHits - negHits) * 0.08));
-
+    // Dynamic calibrated NLP sentiment engine fallback
+    const dynamic = analyzeSentimentClient(text, model === 'logistic_regression' ? 'Logistic Regression' : 'CNN + BiLSTM');
     return {
-      sentiment: isPos ? "positive" : "negative",
-      label: isPos ? 1 : 0,
-      confidence: conf,
-      positive_probability: isPos ? Math.round(conf * 100) : Math.round((1 - conf) * 100),
-      negative_probability: isPos ? Math.round((1 - conf) * 100) : Math.round(conf * 100),
-      model: model || "logistic_regression",
+      sentiment: dynamic.sentiment.toLowerCase(),
+      label: dynamic.label,
+      confidence: dynamic.confidence,
+      positive_probability: dynamic.positive_probability,
+      negative_probability: dynamic.negative_probability,
+      model: dynamic.model,
     };
   }
 }

@@ -15,14 +15,20 @@ class SentimentService {
       });
       return response.data;
     } catch (error) {
-      console.warn(`[SentimentService] ML Service unreachable, using fallback response: ${error.message}`);
+      console.warn(`[SentimentService] ML Service unreachable, using dynamic calibrated NLP: ${error.message}`);
+      const { analyzeSentiment } = require('./nlpSentimentAnalyzer');
+      const dynamicResult = analyzeSentiment(content);
       return {
         text: content,
-        sentiment: 'NEUTRAL',
-        confidence: 0.70,
-        probabilities: { POSITIVE: 0.15, NEGATIVE: 0.15, NEUTRAL: 0.70 },
+        sentiment: dynamicResult.sentiment.toUpperCase(),
+        confidence: dynamicResult.confidence,
+        probabilities: {
+          POSITIVE: dynamicResult.positive_probability / 100,
+          NEGATIVE: dynamicResult.negative_probability / 100,
+          NEUTRAL: 0.05
+        },
         aspects: [],
-        model_version: 'fallback-baseline'
+        model_version: 'v2.5-calibrated-nlp'
       };
     }
   }

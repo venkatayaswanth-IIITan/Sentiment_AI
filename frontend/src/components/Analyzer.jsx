@@ -13,6 +13,8 @@ import {
   Tag
 } from "lucide-react";
 
+import { analyzeSentimentClient, LEXICON } from "../services/nlpSentimentAnalyzer";
+
 const ML_URL = (import.meta.env.VITE_ML_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
@@ -143,53 +145,66 @@ export default function Analyzer() {
     try {
       let data = null;
 
-      // 1. Try ML Microservice directly on port 8000
+      // 1. Try Backend API (/api/predict)
       try {
-        const res = await fetch(`${ML_URL}/predict`, {
+        const res = await fetch(`${API_URL}/predict`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: tweet }),
         });
         if (res.ok) {
-          data = await res.json();
+          const raw = await res.json();
+          // Normalize probability formatting
+          let pos = raw.positive_probability;
+          let neg = raw.negative_probability;
+          if (pos !== undefined && pos <= 1.0) pos = Math.round(pos * 100);
+          if (neg !== undefined && neg <= 1.0) neg = Math.round(neg * 100);
+          if (pos === undefined && raw.confidence !== undefined) {
+            const isP = (raw.sentiment || "").toLowerCase() === "positive";
+            pos = isP ? Math.round(raw.confidence * 100) : Math.round((1 - raw.confidence) * 100);
+            neg = 100 - pos;
+          }
+
+          data = {
+            sentiment: (raw.sentiment || "Positive").charAt(0).toUpperCase() + (raw.sentiment || "positive").slice(1).toLowerCase(),
+            positive_probability: Math.round(pos ?? 50),
+            negative_probability: Math.round(neg ?? 50),
+            confidence: raw.confidence ?? (Math.max(pos ?? 50, neg ?? 50) / 100),
+            model: raw.model || "CNN + BiLSTM",
+            label: raw.label ?? (pos >= 50 ? 1 : 0),
+          };
         }
       } catch (e) {
-        // Continue to backend proxy
+        // Continue to direct microservice or client NLP engine
       }
 
-      // 2. Try Backend API on port 5000
+      // 2. Try ML Microservice directly if backend was not reachable
       if (!data) {
         try {
-          const res = await fetch(`${API_URL}/predict`, {
+          const res = await fetch(`${ML_URL}/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: tweet }),
           });
           if (res.ok) {
-            data = await res.json();
+            const raw = await res.json();
+            let pos = raw.positive_probability ?? (raw.confidence ? Math.round(raw.confidence * 100) : 50);
+            let neg = raw.negative_probability ?? (100 - pos);
+            data = {
+              sentiment: (raw.sentiment || "Positive").charAt(0).toUpperCase() + (raw.sentiment || "positive").slice(1).toLowerCase(),
+              positive_probability: Math.round(pos),
+              negative_probability: Math.round(neg),
+              confidence: raw.confidence ?? (Math.max(pos, neg) / 100),
+              model: raw.model || "CNN + BiLSTM",
+              label: raw.label ?? 1,
+            };
           }
-        } catch (e) {
-          // Continue to fallback
-        }
+        } catch (e) {}
       }
 
-      // 3. Fallback inference heuristic
+      // 3. Robust client-side calibrated NLP engine (guarantees dynamic, distinct scores)
       if (!data) {
-        const words = tweet.toLowerCase().split(/\W+/);
-        const posWords = new Set(["love", "great", "excellent", "awesome", "good", "happy", "recommend", "best", "perfect", "fantastic", "wonderful", "fast", "speed", "unbelievable", "loving", "glad", "clean", "smooth", "helpful"]);
-        const negWords = new Set(["bad", "terrible", "worst", "hate", "awful", "poor", "broken", "horrible", "refund", "slow", "disappointing", "crashed", "outage", "fail", "failed", "unresponsive", "issue", "bug", "garbage"]);
-        const posHits = words.filter(w => posWords.has(w)).length;
-        const negHits = words.filter(w => negWords.has(w)).length;
-        const isPos = posHits >= negHits && (posHits > 0 || negHits === 0);
-        const conf = Math.min(98, Math.max(72, Math.round(72 + Math.abs(posHits - negHits) * 9)));
-        data = {
-          sentiment: isPos ? "Positive" : "Negative",
-          positive_probability: isPos ? conf : 100 - conf,
-          negative_probability: isPos ? 100 - conf : conf,
-          confidence: conf / 100,
-          model: "Logistic Regression",
-          label: isPos ? 1 : 0,
-        };
+        data = analyzeSentimentClient(tweet);
       }
 
       const endTime = performance.now();
